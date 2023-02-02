@@ -4,10 +4,13 @@ server:
 logging:
   level:
     root: INFO
-    org.springframework.web: INFO
-    org.springframework.security: INFO
-    org.springframework.security.oauth2: INFO
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG
 #    org.springframework.boot.autoconfigure: DEBUG
+    reactor.netty.http.client: DEBUG
+    org.apache.http: DEBUG
+    org.apache.hc.client5.http.wire: DEBUG
 
 spring:
   thymeleaf:
@@ -16,6 +19,7 @@ spring:
     oauth2:
       client:
         registration:
+          # Client for OIDC requests
           messaging-client-oidc:
             provider: spring
             client-id: messaging-client
@@ -29,7 +33,11 @@ spring:
             client-id: messaging-client
             client-secret: secret
             authorization-grant-type: authorization_code
-            redirect-uri: "http://127.0.0.1:8080/authorized"
+            # Where the browser is sent back to after being authorized.
+            # TODO though I don't know where this url is defined
+            # It looks like this url is actually not defined anywhere, it just needs to match what is registered in the AS
+            # I think it's handled by some filter and defaults to /oauth2/authorization/messaging-client-authorization-code?
+            redirect-uri: "http://127.0.0.1:8080/authorizedBLA"
             scope: message.read,message.write
             client-name: messaging-client-authorization-code
           messaging-client-client-credentials:
@@ -44,4 +52,4 @@ spring:
             issuer-uri: http://localhost:9000
 
 messages:
-  base-uri: http://127.0.0.1:8090/messages
+  base-uri: http://127.0.0.1:8090/private/messages_scoped

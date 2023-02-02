@@ -21,6 +21,12 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import org.springframework.security.config.annotation.web.configurers.CorsConfigurer;
+import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
+import org.springframework.security.oauth2.core.oidc.endpoint.OidcParameterNames;
+import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
+import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import sample.jose.Jwks;
 
 import org.springframework.context.annotation.Bean;
@@ -60,25 +66,40 @@ import org.springframework.security.web.authentication.LoginUrlAuthenticationEnt
 public class AuthorizationServerConfig {
 
 	@Bean
-	@Order(Ordered.HIGHEST_PRECEDENCE)
+	@Order(Ordered.HIGHEST_PRECEDENCE + 100)
 	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
-		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
-		http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
-				.oidc(Customizer.withDefaults());	// Enable OpenID Connect 1.0
+		// OLI: adding cors config in the main security config has no effect, it needs to be before all this OAuth stuff
+		http.cors();
 
-		// @formatter:off
-		http
-			.exceptionHandling(exceptions ->
+		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
+
+		http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
+				// Enable OpenID Connect 1.0
+				.oidc(Customizer.withDefaults());
+
+		// Enable RS support to allow userinfo requests to be authenticated with access tokens
+		http.oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
+
+		http.exceptionHandling(exceptions ->
 				exceptions.authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))
-			)
-			.oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
-		// @formatter:on
+		);
+
 		return http.build();
 	}
 
 	// @formatter:off
 	@Bean
 	public RegisteredClientRepository registeredClientRepository(JdbcTemplate jdbcTemplate) {
+
+		// Save registered client in db as if in-memory
+		JdbcRegisteredClientRepository registeredClientRepository = new JdbcRegisteredClientRepository(jdbcTemplate);
+		registeredClientRepository.save(createMessageClient());
+		registeredClientRepository.save(createSpaClient());
+
+		return registeredClientRepository;
+	}
+
+	private static RegisteredClient createMessageClient() {
 		RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
 				.clientId("messaging-client")
 				.clientSecret("{noop}secret")
@@ -87,19 +108,33 @@ public class AuthorizationServerConfig {
 				.authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
 				.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
 				.redirectUri("http://127.0.0.1:8080/login/oauth2/code/messaging-client-oidc")
-				.redirectUri("http://127.0.0.1:8080/authorized")
+				.redirectUri("http://127.0.0.1:8080/authorizedBLA")
 				.scope(OidcScopes.OPENID)
 				.scope(OidcScopes.PROFILE)
 				.scope("message.read")
 				.scope("message.write")
 				.clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
 				.build();
+		return registeredClient;
+	}
 
-		// Save registered client in db as if in-memory
-		JdbcRegisteredClientRepository registeredClientRepository = new JdbcRegisteredClientRepository(jdbcTemplate);
-		registeredClientRepository.save(registeredClient);
-
-		return registeredClientRepository;
+	private static RegisteredClient createSpaClient() {
+		RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
+				.clientId("spa-client")
+				.clientSecret("{noop}spasecret")
+				.clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
+				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+				.authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+				.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+				.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+				.redirectUri("http://127.0.0.1:3000/")
+				.scope(OidcScopes.OPENID)
+				.scope(OidcScopes.PROFILE)
+				.scope("message.read")
+				.scope("message.write")
+				.clientSettings(ClientSettings.builder().requireAuthorizationConsent(false).build())
+				.build();
+		return registeredClient;
 	}
 	// @formatter:on
 

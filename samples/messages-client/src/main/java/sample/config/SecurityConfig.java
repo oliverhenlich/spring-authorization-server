@@ -17,10 +17,20 @@ package sample.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.http.converter.FormHttpMessageConverter;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
+import org.springframework.security.oauth2.client.endpoint.DefaultAuthorizationCodeTokenResponseClient;
+import org.springframework.security.oauth2.client.http.OAuth2ErrorResponseErrorHandler;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
+import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
+import org.springframework.security.oauth2.core.http.converter.OAuth2AccessTokenResponseHttpMessageConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.Arrays;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
@@ -41,11 +51,36 @@ public class SecurityConfig {
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http
-			.authorizeHttpRequests(authorize ->
-				authorize.anyRequest().authenticated()
-			)
-			.oauth2Login(oauth2Login ->
-				oauth2Login.loginPage("/oauth2/authorization/messaging-client-oidc"))
+				.authorizeHttpRequests(authorize ->
+						authorize.anyRequest().authenticated()
+				)
+				.oauth2Login(oauth2Login -> {
+					// Customize the accessTokenResponseClient to use a more informative RestClient instance
+					DefaultAuthorizationCodeTokenResponseClient accessTokenResponseClient = new DefaultAuthorizationCodeTokenResponseClient();
+					RestTemplate tokenRestTemplate = new RestTemplate(Arrays.asList(new FormHttpMessageConverter(), new OAuth2AccessTokenResponseHttpMessageConverter()));
+					tokenRestTemplate.setErrorHandler(new OAuth2ErrorResponseErrorHandler());
+					tokenRestTemplate.setRequestFactory(new HttpComponentsClientHttpRequestFactory());
+					accessTokenResponseClient.setRestOperations(tokenRestTemplate);
+
+					// Customize the oidcUserService to use a more informative RestClient instance
+					DefaultOAuth2UserService oauthUserService = new DefaultOAuth2UserService();
+					RestTemplate userServiceRestTemplate = new RestTemplate();
+					userServiceRestTemplate.setErrorHandler(new OAuth2ErrorResponseErrorHandler());
+					userServiceRestTemplate.setRequestFactory(new HttpComponentsClientHttpRequestFactory());
+					oauthUserService.setRestOperations(userServiceRestTemplate);
+
+					OidcUserService oidcUserService = new OidcUserService();
+					oidcUserService.setOauth2UserService(oauthUserService);
+
+					oauth2Login
+							.tokenEndpoint()
+								.accessTokenResponseClient(accessTokenResponseClient)
+								.and()
+							.userInfoEndpoint()
+								.oidcUserService(oidcUserService)
+								.and()
+							.loginPage("/oauth2/authorization/messaging-client-oidc");
+				})
 			.oauth2Client(withDefaults());
 		return http.build();
 	}

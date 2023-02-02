@@ -46,10 +46,15 @@ public class AuthorizationController {
 		this.messagesBaseUri = messagesBaseUri;
 	}
 
+	/**
+	 * Endpoint that will perform the request to the API RS.
+	 * No idea why the guy who built the example called it "authorize".
+	 */
 	@GetMapping(value = "/authorize", params = "grant_type=authorization_code")
-	public String authorizationCodeGrant(Model model,
-			@RegisteredOAuth2AuthorizedClient("messaging-client-authorization-code")
-					OAuth2AuthorizedClient authorizedClient) {
+	public String authorizationCodeGrant(
+			Model model,
+			@RegisteredOAuth2AuthorizedClient("messaging-client-authorization-code") OAuth2AuthorizedClient authorizedClient
+	) {
 
 		String[] messages = this.webClient
 				.get()
@@ -63,6 +68,9 @@ public class AuthorizationController {
 		return "index";
 	}
 
+	/**
+	 * As far as I can tell this one never gets called.
+	 */
 	// '/authorized' is the registered 'redirect_uri' for authorization_code
 	@GetMapping(value = "/authorized", params = OAuth2ParameterNames.ERROR)
 	public String authorizationFailed(Model model, HttpServletRequest request) {

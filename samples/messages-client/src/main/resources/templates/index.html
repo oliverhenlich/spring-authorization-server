@@ -5,7 +5,7 @@
         <meta charset="utf-8" />
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-        <link rel="stylesheet" href="/webjars/bootstrap/css/bootstrap.css" th:href="@{/webjars/bootstrap/css/bootstrap.css}" />
+<!--        <link rel="stylesheet" href="/webjars/bootstrap/css/bootstrap.css" th:href="@{/webjars/bootstrap/css/bootstrap.css}" />-->
     </head>
     <body>
         <div th:fragment="header">
@@ -29,6 +29,11 @@
                 </div>
                 <ul class="list-group">
                     <li class="list-group-item">
+                        <!--
+                        Here we want to initiate the authorization_code grant flow.
+                        The url /authorize is defined in AuthorizationController.authorizationCodeGrant
+                        This is the thing that will ultimately call our api.
+                        -->
                         <a href="/authorize?grant_type=authorization_code" th:href="@{/authorize?grant_type=authorization_code}"><span style="font-size:medium">Authorization Code</span>&nbsp;&nbsp;<small class="text-muted">(Login to Spring Authorization Server using: user1/password)</small></a>
                     </li>
                     <li class="list-group-item">
@@ -47,7 +52,7 @@
                 </div>
             </div>
         </div>
-        <script src="/webjars/jquery/jquery.min.js" th:src="@{/webjars/jquery/jquery.min.js}"></script>
-        <script src="/webjars/bootstrap/js/bootstrap.min.js" th:src="@{/webjars/bootstrap/js/bootstrap.min.js}"></script>
+<!--        <script src="/webjars/jquery/jquery.min.js" th:src="@{/webjars/jquery/jquery.min.js}"></script>-->
+<!--        <script src="/webjars/bootstrap/js/bootstrap.min.js" th:src="@{/webjars/bootstrap/js/bootstrap.min.js}"></script>-->
     </body>
 </html>

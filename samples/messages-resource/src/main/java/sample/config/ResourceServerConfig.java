@@ -20,6 +20,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
  * @author Joe Grandja
@@ -33,14 +35,38 @@ public class ResourceServerConfig {
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http
-			.securityMatcher("/messages/**")
-				.authorizeHttpRequests()
-					.requestMatchers("/messages/**").hasAuthority("SCOPE_message.read")
-					.and()
-			.oauth2ResourceServer()
-				.jwt();
+				.cors()
+				.and()
+					.csrf().disable()
+
+				.securityMatcher("/public/**")
+				.anonymous()
+
+				.and()
+					.securityMatcher("/private/**")
+					.authorizeHttpRequests()
+					.requestMatchers("/private/**").authenticated()
+//					.requestMatchers("/private/messages_scoped/**").hasAuthority("SCOPE_message.read")
+
+				.and()
+					.oauth2ResourceServer()
+					.jwt()
+
+		;
 		return http.build();
 	}
-	// @formatter:on
+
+		@Bean
+	public WebMvcConfigurer corsConfigurer() {
+		return new WebMvcConfigurer() {
+			@Override
+			public void addCorsMappings(CorsRegistry registry) {
+				registry.addMapping("/**")
+						.allowedOrigins("http://127.0.0.1:3000")
+						.allowedMethods("*")
+						.allowedHeaders("*");
+			}
+		};
+	}
 
 }

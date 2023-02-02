@@ -1,0 +1,12 @@
+#GET http://localhost:9000/oauth2/authorize?response_type=token&client_id=spa-client&redirect_uri=http://127.0.0.1:8080/authorizedSPA
+GET http://localhost:9000/oauth2/authorize?response_type=code&client_id=spa-client&redirect_uri=http://127.0.0.1:8080/authorizedSPA
+Accept: application/json
+
+###
+
+# @no-redirect
+POST http://localhost:9000/login
+Content-Type: application/x-www-form-urlencoded
+
+username=user1&password=password&_csrf=p_R3NftwEgT5cZsbH8Mb2ivIBYIa0UBA7tw9g1GJ9pJo3bRPlcMRUJlIJ2DUEvgpfe4v70qtKLsq4HRtiOQN5jXqlPRY6YIt
+
